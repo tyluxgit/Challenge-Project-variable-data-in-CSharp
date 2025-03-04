@@ -1,4 +1,24 @@
-using System;
+﻿using System.Text;
+Console.OutputEncoding = Encoding.UTF8;
+
+
+static void DisplaySearchAnimation(string dogName)
+{
+    string[] searchingIcons = { "|", "/", "-", "\\" };
+    Console.Write($"\rSearching for {dogName}...");
+
+    for (int j = 5; j > 0; j--)
+    {
+        foreach (string icon in searchingIcons)
+        {
+            Console.Write($"\rSearching {dogName}... {icon} ({j}s) ");
+            Thread.Sleep(150);
+        }
+    }
+
+    Console.Write("\r" + new string(' ', Console.BufferWidth) + "\r");
+}
+
 
 // ourAnimals array will store the following: 
 string animalSpecies = "";
@@ -82,8 +102,9 @@ for (int i = 0; i < maxPets; i++)
     ourAnimals[i, 3] = "Nickname: " + animalNickname;
     ourAnimals[i, 4] = "Physical description: " + animalPhysicalDescription;
     ourAnimals[i, 5] = "Personality: " + animalPersonalityDescription;
-    
-    if (!decimal.TryParse(suggestedDonation, out decimalDonation)){
+
+    if (!decimal.TryParse(suggestedDonation, out decimalDonation))
+    {
         decimalDonation = 45.00m; // if suggestedDonation NOT a number, default to 45.00
     }
     ourAnimals[i, 6] = $"Suggested Donation: {decimalDonation:C2}";
@@ -130,73 +151,63 @@ do
             break;
 
         case "2":
-            // #1 Display all dogs with a multiple search characteristics
+            Console.WriteLine("\nEnter dog characteristics to search for separated by commas:");
+            readResult = Console.ReadLine();
+            string[] searchTerms = readResult.Split(',')
+                                             .Select(t => t.Trim().ToLower())
+                                             .Where(t => !string.IsNullOrWhiteSpace(t))
+                                             .ToArray();
 
-            string dogCharacteristic = "";
-
-            while (dogCharacteristic == "")
+            if (searchTerms.Length == 0)
             {
-                // #2 have user enter multiple comma separated characteristics to search for
-                Console.WriteLine($"\r\nEnter one desired dog characteristic to search for");
-                readResult = Console.ReadLine();
-                if (readResult != null)
-                {
-                    dogCharacteristic = readResult.ToLower().Trim();
-                    Console.WriteLine();
-                }
+                Console.WriteLine("⚠ No valid characteristics entered. Please try again.");
+                break;
             }
 
-            bool noMatchesDog = true;
-            string dogDescription = "";
-            
-            // #4 update to "rotating" animation with countdown
-            string[] searchingIcons = {".  ", ".. ", "..."};
+            bool foundDog = false;
+            HashSet<string> matchedTerms = new HashSet<string>(); // Stocke les termes qui ont eu une correspondance
+            HashSet<string> unmatchedTerms = new HashSet<string>(searchTerms); // Commence avec tous les termes
 
-            // loop ourAnimals array to search for matching animals
             for (int i = 0; i < maxPets; i++)
             {
+                if (ourAnimals[i, 1] == null || !ourAnimals[i, 1].ToLower().Contains("dog"))
+                    continue; // Ignore si ce n'est pas un chien ou s'il y a des valeurs nulles
 
-                if (ourAnimals[i, 1].Contains("dog"))
+                string dogName = ourAnimals[i, 3] ?? "Unknown";
+                string dogDescription = $"{ourAnimals[i, 4] ?? ""}\n{ourAnimals[i, 5] ?? ""}";
+
+                // Animation de recherche
+                DisplaySearchAnimation(dogName);
+
+                // Recherche des termes correspondants
+                List<string> foundKeywords = searchTerms.Where(term => dogDescription.ToLower().Contains(term)).ToList();
+
+                if (foundKeywords.Count > 0)
                 {
-                    
-                    // Search combined descriptions and report results
-                    dogDescription = ourAnimals[i, 4] + "\r\n" + ourAnimals[i, 5];
-                    
-                    for (int j = 5; j > -1 ; j--)
-                    {
-                    // #5 update "searching" message to show countdown 
-                        foreach (string icon in searchingIcons)
-                        {
-                            Console.Write($"\rsearching our dog {ourAnimals[i, 3]} for {dogCharacteristic} {icon}");
-                            Thread.Sleep(250);
-                        }
-                        
-                        Console.Write($"\r{new String(' ', Console.BufferWidth)}");
-                    }
-                    
-                    // #3a iterate submitted characteristic terms and search description for each term
-                    
-                    if (dogDescription.Contains(dogCharacteristic))
-                    {
-                        // #3b update message to reflect term 
-                        // #3c set a flag "this dog" is a match
-                        Console.WriteLine($"\nOur dog {ourAnimals[i, 3]} is a match!");
+                    Console.WriteLine($"\n✅ Our dog {dogName} matches your search!");
+                    Console.WriteLine($"📌 {dogName} ({ourAnimals[i, 0]})\n{dogDescription}");
+                    Console.WriteLine($"🔍 Matched keywords: {string.Join(", ", foundKeywords)}");
 
-                        noMatchesDog = false;
-                    }
-
-                    // #3d if "this dog" is match write match message + dog description
+                    foundDog = true;
+                    matchedTerms.UnionWith(foundKeywords); // Ajouter les termes trouvés
                 }
             }
 
-            if (noMatchesDog)
+            // Identifier les termes qui n'ont pas eu de correspondance
+            unmatchedTerms.ExceptWith(matchedTerms);
+
+            if (!foundDog)
             {
-                Console.WriteLine("None of our dogs are a match found for: " + dogCharacteristic);
+                Console.WriteLine("\n❌ No matching dogs found.");
             }
 
-            Console.WriteLine("\n\rPress the Enter key to continue");
-            readResult = Console.ReadLine();
+            if (unmatchedTerms.Count > 0)
+            {
+                Console.WriteLine("\n⚠ No matches found for these keywords: " + string.Join(", ", unmatchedTerms));
+            }
 
+            Console.WriteLine("\nPress Enter to continue...");
+            Console.ReadLine();
             break;
 
         default:
